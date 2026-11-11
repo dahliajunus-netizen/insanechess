@@ -1465,6 +1465,20 @@ function bindDuel() {
 
 // ---------- Online play: a direct connection between two browsers ----------
 const ROOM = 'insanechess-', CODE_CHARS = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
+// Address of the optional TURN credentials Worker (see turn-worker/README.md). Empty uses the library's default relay.
+const TURN_ENDPOINT = '';
+
+// Ask the Worker for relay servers; carry on without them if it is unset, slow or failing.
+function getIce(cb) {
+  if (!TURN_ENDPOINT) { cb(null); return; }
+  let done = false;
+  const finish = v => { if (!done) { done = true; cb(v); } };
+  setTimeout(() => finish(null), 4000);
+  fetch(TURN_ENDPOINT).then(r => (r.ok ? r.json() : null))
+    .then(d => finish(d && Array.isArray(d.iceServers) && d.iceServers.length ? d.iceServers : null))
+    .catch(() => finish(null));
+}
+const peerOpts = ice => (ice ? { config: { iceServers: ice } } : {});
 
 function loadPeer(cb) {
   if (window.Peer) { cb(); return; }
@@ -1495,31 +1509,31 @@ function netCreate() {
   netReset();
   net.state = 'opening'; net.msg = '';
   render();
-  loadPeer(() => {
-    if (net.state !== 'opening') return;
+  loadPeer(() => getIce(ice => {
+    if (net.state !== 'opening' || net.peer) return;
     let code = '';
     for (let i = 0; i < 5; i++) code += CODE_CHARS[Math.floor(Math.random() * CODE_CHARS.length)];
     let peer;
-    try { peer = new Peer(ROOM + code); } catch (e) { netFail(netErr({ type: 'browser-incompatible' })); return; }
+    try { peer = new Peer(ROOM + code, peerOpts(ice)); } catch (e) { netFail(netErr({ type: 'browser-incompatible' })); return; }
     net.peer = peer; net.host = true; net.code = code; net.color = settings.human;
     peer.on('open', () => { if (net.peer !== peer) return; net.state = 'waiting'; render(); });
     peer.on('connection', conn => { if (net.peer === peer) netAttach(conn); });
     peer.on('error', e => { if (net.peer === peer && !net.conn) netFail(netErr(e)); });
-  });
+  }));
 }
 
 function netJoin(code) {
   netReset();
   net.state = 'opening'; net.msg = '';
   render();
-  loadPeer(() => {
-    if (net.state !== 'opening') return;
+  loadPeer(() => getIce(ice => {
+    if (net.state !== 'opening' || net.peer) return;
     let peer;
-    try { peer = new Peer(); } catch (e) { netFail(netErr({ type: 'browser-incompatible' })); return; }
+    try { peer = new Peer(undefined, peerOpts(ice)); } catch (e) { netFail(netErr({ type: 'browser-incompatible' })); return; }
     net.peer = peer; net.code = code;
     peer.on('open', () => { if (net.peer === peer) netAttach(peer.connect(ROOM + code, { reliable: true })); });
     peer.on('error', e => { if (net.peer === peer && !net.conn) netFail(netErr(e)); });
-  });
+  }));
 }
 
 function netAttach(conn) {

@@ -47,3 +47,7 @@ A king that loses a duel loses the game. A king left in check after a lost duel 
 ## Other features
 
 Clocks, hints, take-backs, move review, three board colours, sound, and PGN export. Set "Captures" to "Classic chess" to play without duels.
+
+## If two devices cannot connect
+
+Most home and mobile networks work as is. For stricter networks, the game can use Cloudflare TURN as a relay. See [turn-worker/README.md](turn-worker/README.md).
