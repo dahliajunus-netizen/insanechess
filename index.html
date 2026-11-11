@@ -1466,7 +1466,7 @@ function bindDuel() {
 // ---------- Online play: a direct connection between two browsers ----------
 const ROOM = 'insanechess-', CODE_CHARS = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
 // Address of the optional TURN credentials Worker (see turn-worker/README.md). Empty uses the library's default relay.
-const TURN_ENDPOINT = '';
+const TURN_ENDPOINT = 'https://insanechess-turn.skylark-flight.workers.dev';
 
 // Ask the Worker for relay servers; carry on without them if it is unset, slow or failing.
 function getIce(cb) {
